@@ -7,7 +7,11 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test:security": "node --experimental-strip-types tests/security.test.ts",
+    "check:env": "node scripts/vercel-env-check.mjs",
+    "check:supabase": "node scripts/supabase-check.mjs",
+    "telegram:setup": "node scripts/telegram-setup.mjs"
   },
   "dependencies": {
     "clsx": "^2.1.1",

@@ -1,8 +1,12 @@
 /**
  * Telegram Bot API.
- * Webhook: el token puede viajar en la URL (?token=...) o como secret_token
- * (X-Telegram-Bot-Api-Secret-Token). Telegram no firma el cuerpo.
- * Envío: POST https://api.telegram.org/bot<TOKEN>/sendMessage.
+ *
+ * Entrada: webhook JSON con `message` / `edited_message`. Telegram no firma el
+ * cuerpo; la protección opcional es el `secret_token` enviado en la cabecera
+ * `X-Telegram-Bot-Api-Secret-Token` al configurar `setWebhook`.
+ *
+ * Salida: POST https://api.telegram.org/bot<TOKEN>/sendMessage con `fetch`.
+ * Ninguna función de este módulo lanza excepciones.
  */
 
 import type { Inbox, InboundMessage, OutboundResult } from "@/lib/types";
@@ -14,91 +18,118 @@ import type {
 } from "./types";
 import {
   asRecord,
+  errorMessage,
   failedResult,
   getCredential,
   headerValue,
   payloadBody,
-  queryValue,
   requireCredentials,
   resolveCredential,
   stringValue,
   toIsoTimestamp,
 } from "./types";
 import { safeEqual } from "./crypto";
-import { requestJson, responseId } from "./http";
+
+const SECRET_HEADER = "x-telegram-bot-api-secret-token";
+const TELEGRAM_API = "https://api.telegram.org";
+
+/** Telegram envía IDs numéricos; los normalizamos a string sin perder precisión. */
+function idValue(value: unknown): string {
+  if (typeof value === "number" && Number.isFinite(value)) return String(value);
+  return stringValue(value);
+}
 
 function verify(payload: ChannelPayload, credentials: ChannelCredentials): boolean {
-  const secretToken = resolveCredential(credentials, "secretToken", "telegram");
-  const headerToken = headerValue(payload, "x-telegram-bot-api-secret-token");
-  if (secretToken && headerToken) return safeEqual(headerToken, secretToken);
+  try {
+    const secretToken = resolveCredential(credentials, "secretToken", "telegram");
+    if (!secretToken) return true;
 
-  const urlToken = queryValue(payload, "token") || queryValue(payload, "secret_token");
-  if (urlToken) {
-    const secret =
-      secretToken || resolveCredential(credentials, "botToken", "telegram");
-    return Boolean(secret) && safeEqual(urlToken, secret);
+    const provided = headerValue(payload, SECRET_HEADER);
+    if (!provided) return false;
+    return safeEqual(provided, secretToken);
+  } catch {
+    return false;
   }
-
-  return true;
 }
 
 function normalize(payload: ChannelPayload, inbox: Inbox): InboundMessage | null {
-  const body = payloadBody(payload);
-  const callbackQuery = asRecord(body.callback_query);
-  const raw =
-    asRecord(body.message) ??
-    asRecord(body.edited_message) ??
-    asRecord(body.channel_post) ??
-    asRecord(callbackQuery?.message);
+  try {
+    const body = payloadBody(payload);
+    const raw = asRecord(body.message) ?? asRecord(body.edited_message);
+    if (!raw) return null;
 
-  if (!raw) return null;
+    const externalMessageId = idValue(raw.message_id);
+    const chat = asRecord(raw.chat) ?? {};
+    const externalContactId = idValue(chat.id);
+    if (!externalMessageId || !externalContactId) return null;
 
-  const externalMessageId = stringValue(raw.message_id);
-  const chat = asRecord(raw.chat) ?? {};
-  const externalContactId = stringValue(chat.id);
-  if (!externalMessageId || !externalContactId) return null;
+    const text = stringValue(raw.text) || stringValue(raw.caption);
+    if (!text) return null;
 
-  const from = asRecord(raw.from) ?? {};
-  const firstName = stringValue(from.first_name);
-  const lastName = stringValue(from.last_name);
-  const username = stringValue(from.username);
-  const contactName = [firstName, lastName].filter(Boolean).join(" ") || username || undefined;
+    const from = asRecord(raw.from) ?? {};
+    const firstName = stringValue(from.first_name);
+    const lastName = stringValue(from.last_name);
+    const username = stringValue(from.username);
+    const contactName = [firstName, lastName].filter(Boolean).join(" ") || username || undefined;
 
-  return {
-    channel: "telegram",
-    inboxId: inbox.id,
-    externalMessageId,
-    externalContactId,
-    contactName,
-    body:
-      stringValue(raw.text) ||
-      stringValue(raw.caption) ||
-      stringValue(asRecord(body.callback_query)?.data) ||
-      "",
-    timestamp: toIsoTimestamp(raw.date),
-    raw,
-  };
+    return {
+      channel: "telegram",
+      inboxId: inbox.id,
+      externalMessageId,
+      externalContactId,
+      contactName,
+      body: text,
+      timestamp: toIsoTimestamp(raw.date),
+      raw,
+    };
+  } catch {
+    return null;
+  }
 }
 
 async function send(message: OutboundMessage, inbox: Inbox): Promise<OutboundResult> {
-  const missing = requireCredentials(inbox, ["botToken"]);
-  if (missing.length) {
-    return failedResult(`Telegram: faltan credenciales (${missing.join(", ")})`);
+  try {
+    const missing = requireCredentials(inbox, ["botToken"], "telegram");
+    if (missing.length) {
+      return failedResult(`Telegram: faltan credenciales (${missing.join(", ")})`);
+    }
+
+    const botToken = getCredential(inbox, "botToken");
+    if (!botToken) return failedResult("Telegram: falta botToken");
+
+    const to = stringValue(message?.to) || getCredential(inbox, "defaultChatId");
+    if (!to) {
+      return failedResult("Telegram: falta el chat_id de destino (to) y no hay defaultChatId");
+    }
+
+    const text = stringValue(message?.body);
+    if (!text) return failedResult("Telegram: el mensaje no tiene texto");
+
+    const response = await fetch(`${TELEGRAM_API}/bot${botToken}/sendMessage`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ chat_id: to, text }),
+    });
+
+    let data: unknown;
+    try {
+      data = await response.json();
+    } catch {
+      return failedResult(`Telegram: respuesta no válida del Bot API (HTTP ${response.status})`);
+    }
+
+    const record = asRecord(data);
+    if (!response.ok || record?.ok === false) {
+      const description = stringValue(record?.description);
+      return failedResult(description || `Telegram: error HTTP ${response.status}`);
+    }
+
+    const result = asRecord(record?.result) ?? record;
+    const externalMessageId = idValue(result?.message_id);
+    return { delivered: true, externalMessageId: externalMessageId || undefined };
+  } catch (error) {
+    return failedResult(`Telegram: ${errorMessage(error)}`);
   }
-  const to = message.to || getCredential(inbox, "defaultChatId");
-  if (!to) return failedResult("Telegram: falta el chat_id de destino (to)");
-
-  const botToken = getCredential(inbox, "botToken");
-  const result = await requestJson(`https://api.telegram.org/bot${botToken}/sendMessage`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ chat_id: to, text: message.body }),
-  });
-
-  if (!result.ok) return failedResult(`Telegram: ${result.error ?? "error desconocido"}`);
-  const data = asRecord(result.data);
-  const messageId = data ? stringValue(data.message_id) : "";
-  return { delivered: true, externalMessageId: messageId || responseId(result.data) };
 }
 
 export const telegramAdapter: ChannelAdapter = {

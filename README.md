@@ -131,6 +131,18 @@ Detalles y checklist en `docs/DEPLOYMENT.md`.
 
 Estructura y decisiones de diseño en `docs/ARCHITECTURE.md`, `docs/DATA_MODEL.md`, `docs/ROADMAP.md`, `docs/CHANNELS.md`, `docs/CONVERSATIONAL_ENGINE.md` y `docs/DATABASE.md`.
 
+### Guías para la próxima clase
+
+| Tema | Documento | Comando útil |
+|---|---|---|
+| Base de datos en Supabase | `docs/SUPABASE.md` | `npm run check:supabase` |
+| Despliegue en Vercel y `/api/health` | `docs/VERCEL.md` | `npm run check:env` |
+| Repositorio, CI y GitHub CLI | `docs/GITHUB.md` | — |
+| Conexión segura de APIs | `docs/SECURITY.md` | `npm run test:security` |
+| Prueba real con Telegram | `docs/TELEGRAM_TEST.md` | `npm run telegram:setup` |
+
+La migración para Supabase está en `supabase/migrations/0001_init.sql` y el workflow de CI en `.github/workflows/ci.yml`.
+
 ---
 
 ## Estado del proyecto
