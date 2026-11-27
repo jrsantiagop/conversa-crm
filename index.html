@@ -1,0 +1,142 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Conversa CRM — Demo</title>
+<style>
+:root{--bg:#f5f6f8;--surface:#fff;--border:#e4e7ec;--text:#181a20;--muted:#6b7280;--brand:#5b5bd6;--sidebar:#171821;--green:#16794c;--amber:#a15c00}
+*{box-sizing:border-box}body{margin:0;font:14px/1.45 ui-sans-serif,system-ui,"Segoe UI",Roboto,Arial,sans-serif;background:var(--bg);color:var(--text)}
+.app{display:flex;min-height:100vh}.sidebar{width:220px;background:var(--sidebar);color:#c9cad4;padding:20px 14px;display:flex;flex-direction:column;position:sticky;top:0;height:100vh}
+.brand{color:#fff;font-weight:700;font-size:17px;display:flex;align-items:center;gap:9px;margin-bottom:24px}.mark{width:32px;height:32px;border-radius:9px;background:linear-gradient(135deg,#7c7cf0,#4d4dc0);display:grid;place-items:center}
+.nav-item{display:flex;gap:9px;align-items:center;padding:9px 11px;border-radius:9px;cursor:pointer;color:#c9cad4;font-weight:500}.nav-item:hover{background:#ffffff12}.nav-item.active{background:#7c7cf02e;color:#fff}
+.foot{margin-top:auto;border-top:1px solid #ffffff14;padding-top:12px;font-size:12px;color:#9394a4}
+.main{flex:1;min-width:0}.top{height:58px;background:#fff;border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 22px;font-weight:650}
+.page{padding:20px 22px}.head{display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:16px}.head h2{margin:0;font-size:21px}.head p{margin:4px 0 0;color:var(--muted)}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:12px;box-shadow:0 1px 2px #1018280d}.pad{padding:16px}.row{display:flex;align-items:center;gap:8px}.muted{color:var(--muted)}.small{font-size:12px}.strong{font-weight:650}
+.btn{border:1px solid var(--border);background:#fff;border-radius:8px;padding:7px 12px;font-weight:600;cursor:pointer;font-size:13px}.btn:hover{background:#fafbfc}.btn.primary{background:var(--brand);border-color:var(--brand);color:#fff}
+.input,.textarea,.select{width:100%;border:1px solid var(--border);border-radius:8px;padding:9px 10px;font:inherit}.textarea{min-height:72px;resize:vertical}
+.badge{border-radius:20px;padding:2px 9px;font-size:11px;font-weight:650;background:#eef0f4;color:#475467;display:inline-flex;gap:5px;align-items:center}.badge.green{background:#e7f6ee;color:var(--green)}.badge.amber{background:#fff4e5;color:var(--amber)}.badge.brand{background:#efefff;color:var(--brand)}
+.inbox{display:grid;grid-template-columns:300px minmax(0,1fr) 250px;height:calc(100vh - 58px - 40px);min-height:520px}.col{border-right:1px solid var(--border);display:flex;flex-direction:column;min-width:0;background:#fff}.col:last-child{border:0}
+.colhead{padding:13px;border-bottom:1px solid var(--border)}.filters{display:flex;gap:5px;margin-top:9px;flex-wrap:wrap}.filter{border:1px solid var(--border);border-radius:20px;padding:4px 9px;font-size:12px;background:#fff;cursor:pointer}.filter.active{background:var(--brand);border-color:var(--brand);color:#fff}
+.list{overflow:auto;flex:1}.conv{width:100%;text-align:left;border:0;border-bottom:1px solid var(--border);background:#fff;padding:11px 13px;cursor:pointer;display:block}.conv:hover{background:#fafbfc}.conv.sel{background:#f0f0ff;box-shadow:inset 3px 0 0 var(--brand)}
+.avatar{width:28px;height:28px;border-radius:50%;background:#e8e9ff;color:var(--brand);display:grid;place-items:center;font-size:11px;font-weight:700;flex:0 0 28px}
+.preview{color:var(--muted);font-size:12px;margin-top:5px;padding-left:36px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.meta{padding-left:36px;margin-top:4px;font-size:11px;color:var(--muted);display:flex;gap:6px;align-items:center}
+.chathead{padding:12px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px}.chathead .sp{flex:1}.messages{flex:1;overflow:auto;padding:16px;background:#fafbfc;display:flex;flex-direction:column;gap:9px}
+.msg{max-width:76%;padding:9px 12px;border-radius:12px;background:#fff;border:1px solid var(--border);align-self:flex-start}.msg.out{align-self:flex-end;background:var(--brand);border-color:var(--brand);color:#fff}
+.suggest{margin:8px 14px;border:1px solid #dedaff;background:#f7f6ff;border-radius:10px;padding:10px}.composer{border-top:1px solid var(--border);padding:12px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:14px}.field{margin-bottom:10px}.label{display:block;font-size:12px;font-weight:650;color:var(--muted);margin-bottom:4px}
+.toast{position:fixed;right:20px;bottom:20px;background:#181a20;color:#fff;padding:10px 14px;border-radius:9px;z-index:9}
+table{width:100%;border-collapse:collapse}th,td{text-align:left;padding:9px;border-bottom:1px solid var(--border)}th{font-size:11px;color:var(--muted);text-transform:uppercase}
+@media(max-width:1000px){.inbox{grid-template-columns:260px 1fr}.col.right{display:none}}@media(max-width:700px){.sidebar{width:64px}.brand span,.nav-item span,.foot{display:none}.inbox{grid-template-columns:1fr}.col.list{display:none}}
+</style>
+</head>
+<body>
+<div class="app">
+  <aside class="sidebar">
+    <div class="brand"><div class="mark">C</div><span>Conversa</span></div>
+    <div class="nav-item active" data-view="inbox">▤ <span>Bandeja</span></div>
+    <div class="nav-item" data-view="integraciones">⚡ <span>Integraciones</span></div>
+    <div class="nav-item" data-view="conocimiento">▧ <span>Conocimiento</span></div>
+    <div class="nav-item" data-view="crm">◫ <span>CRM</span></div>
+    <div class="foot">Demo estática · GitHub Pages<br>Un inbox · todos los canales</div>
+  </aside>
+  <div class="main">
+    <div class="top" id="topTitle">Bandeja</div>
+    <div class="page" id="view-inbox">
+      <div class="head"><div><h2>Un solo inbox</h2><p class="small muted" id="summary"></p></div><button class="btn small" id="reset">Reiniciar demo</button></div>
+      <div class="card inbox">
+        <section class="col">
+          <div class="colhead"><div class="strong">Conversaciones</div><div class="filters" id="filters"></div></div>
+          <div class="list" id="convList"></div>
+        </section>
+        <section class="col">
+          <div class="chathead"><div id="chatTitle" class="strong"></div><div class="sp"></div>
+            <select class="select" id="priority" style="width:110px"><option>Baja</option><option>Normal</option><option>Alta</option><option>Urgente</option></select>
+            <button class="btn" id="resolve">Resolver</button>
+          </div>
+          <div class="messages" id="messages"></div>
+          <div class="suggest" id="suggest" style="display:none"></div>
+          <div class="composer"><textarea class="textarea" id="reply" placeholder="Escribe tu respuesta…"></textarea>
+            <div class="row" style="margin-top:8px"><button class="btn" id="suggestBtn">✨ Sugerir con IA</button><div class="sp"></div><button class="btn primary" id="send">Enviar</button></div>
+          </div>
+        </section>
+        <section class="col right"><div class="colhead strong">Contacto</div><div class="pad" id="contact"></div></section>
+      </div>
+    </div>
+    <div class="page" id="view-integraciones" style="display:none">
+      <div class="head"><div><h2>Integraciones de canales</h2><p class="muted">Aquí se pegan los IDs y tokens de cada canal. En esta demo se guardan solo en tu navegador.</p></div></div>
+      <div class="grid" id="channels"></div>
+    </div>
+    <div class="page" id="view-conocimiento" style="display:none">
+      <div class="head"><div><h2>Base de conocimiento</h2><p class="muted">El motor usa estos artículos para sugerir respuestas.</p></div></div>
+      <div class="card pad" id="articles"></div>
+    </div>
+    <div class="page" id="view-crm" style="display:none">
+      <div class="head"><div><h2>CRM ligero</h2><p class="muted">Negocios y tareas de ejemplo.</p></div></div>
+      <div class="grid"><div class="card pad"><h3>Negocios</h3><table><tr><th>Negocio</th><th>Etapa</th><th>Valor</th></tr><tr><td>Renovación anual</td><td><span class="badge brand">En negociación</span></td><td>1.500 €</td></tr></table></div>
+      <div class="card pad"><h3>Tareas</h3><table><tr><th>Tarea</th><th>Estado</th></tr><tr><td>Revisar factura de Luis</td><td><span class="badge amber">Pendiente</span></td></tr></table></div></div>
+    </div>
+  </div>
+</div>
+<div class="toast" id="toast" style="display:none"></div>
+<script>
+const KEY='conversa-demo-v1';
+const seed=()=>({convs:[
+ {id:'c1',name:'Luis Ruiz',email:'demo-luis@ejemplo.com',channel:'Web',status:'pending',priority:'Normal',labels:['handoff'],at:'hace 13 min',msgs:[{from:'Luis Ruiz',text:'Necesito hablar con una persona sobre mi factura',out:false}]},
+ {id:'c2',name:'Ana García',email:'demo-ana@ejemplo.com',channel:'Web',status:'open',priority:'Normal',labels:[],at:'hace 13 min',msgs:[{from:'Ana García',text:'Buenas, ¿cuál es el horario de atención?',out:false}]},
+ {id:'c3',name:'Telegram Test',email:'',channel:'Telegram',status:'open',priority:'Normal',labels:[],at:'14/11/2023',msgs:[{from:'Telegram Test',text:'Hola desde Telegram',out:false}]}
+],creds:{},articles:[['Horario de atención','Atendemos de lunes a viernes de 9:00 a 18:00 CET.'],['Devoluciones','Puedes solicitar la devolución escribiéndonos por cualquiera de los canales.']]});
+let state=JSON.parse(localStorage.getItem(KEY)||'null')||seed();
+let selected='c1',filter='all';
+const save=()=>localStorage.setItem(KEY,JSON.stringify(state));
+const toast=(t)=>{const e=document.getElementById('toast');e.textContent=t;e.style.display='block';setTimeout(()=>e.style.display='none',2500)};
+function render(){
+  const counts={open:state.convs.filter(c=>c.status==='open').length,pending:state.convs.filter(c=>c.status==='pending').length,unread:state.convs.length};
+  document.getElementById('summary').textContent=`${counts.open} abiertas · ${counts.pending} pendientes · ${counts.unread} contactos`;
+  document.getElementById('filters').innerHTML=['all','open','pending','resolved'].map(f=>`<button class="filter ${filter===f?'active':''}" data-f="${f}">${f==='all'?'Todas':f==='open'?'Abierta':f==='pending'?'Pendiente':'Resuelta'}</button>`).join('');
+  document.querySelectorAll('#filters .filter').forEach(b=>b.onclick=()=>{filter=b.dataset.f;render()});
+  const list=state.convs.filter(c=>filter==='all'||c.status===filter);
+  document.getElementById('convList').innerHTML=list.map(c=>`<button class="conv ${selected===c.id?'sel':''}" data-id="${c.id}">
+    <div class="row"><div class="avatar">${c.name.split(' ').map(x=>x[0]).join('').slice(0,2)}</div><div class="strong">${c.name}</div><span class="badge">${c.channel}</span></div>
+    <div class="preview">${c.msgs[c.msgs.length-1]?.text||''}</div><div class="meta"><span class="badge ${c.status==='pending'?'amber':'green'}">${c.status==='pending'?'Pendiente':'Abierta'}</span><span>${c.at}</span></div></button>`).join('');
+  document.querySelectorAll('.conv').forEach(b=>b.onclick=()=>{selected=b.dataset.id;render()});
+  const c=state.convs.find(x=>x.id===selected);
+  document.getElementById('chatTitle').textContent=c?`${c.name} · ${c.channel}`:'';
+  document.getElementById('priority').value=c?.priority||'Normal';
+  document.getElementById('messages').innerHTML=c?c.msgs.map(m=>`<div class="msg ${m.out?'out':''}"><div class="small muted">${m.out?'Tú':m.from}</div>${m.text}</div>`).join(''):'';
+  document.getElementById('contact').innerHTML=c?`<div class="row"><div class="avatar" style="width:40px;height:40px;flex-basis:40px">${c.name[0]}</div><div><div class="strong">${c.name}</div><div class="muted small">${c.channel}</div></div></div><p class="small muted">Email</p><div>${c.email||'—'}</div><p class="small muted">Etiquetas</p><div>${c.labels.join(', ')||'—'}</div>`:'';
+  document.getElementById('suggest').style.display='none';
+}
+document.querySelectorAll('.nav-item').forEach(n=>n.onclick=()=>{
+  document.querySelectorAll('.nav-item').forEach(x=>x.classList.remove('active'));n.classList.add('active');
+  const v=n.dataset.view;document.querySelectorAll('[id^="view-"]').forEach(x=>x.style.display='none');
+  document.getElementById('view-'+v).style.display='block';document.getElementById('topTitle').textContent=n.textContent.trim();
+});
+document.getElementById('send').onclick=()=>{
+  const input=document.getElementById('reply'),text=input.value.trim();if(!text)return;
+  const c=state.convs.find(x=>x.id===selected);if(!c)return;
+  c.msgs.push({from:'Tú',text,out:true});c.at='ahora';input.value='';save();render();toast('Respuesta guardada en la demo');
+};
+document.getElementById('suggestBtn').onclick=()=>{
+  const c=state.convs.find(x=>x.id===selected);if(!c)return;
+  const last=c.msgs[c.msgs.length-1].text.toLowerCase();
+  let reply,source,conf;
+  if(/persona|humano|agente/.test(last)){reply='Voy a derivar tu consulta a una persona del equipo.';source='regla · handoff';conf=0.92;}
+  else if(/horario|cuándo|cuando/.test(last)){reply='Atendemos de lunes a viernes de 9:00 a 18:00 CET. Fuera de ese horario te responderemos el siguiente día hábil.';source='RAG · Horario de atención';conf=0.88;}
+  else{reply='Gracias por escribirnos. Revisaremos tu consulta enseguida.';source='fallback';conf=0.35;}
+  const box=document.getElementById('suggest');box.style.display='block';
+  box.innerHTML=`<div class="row small strong">✨ Sugerencia <span class="badge brand">${source}</span><span class="badge">${Math.round(conf*100)}% confianza</span></div><p>${reply}</p><button class="btn" id="useSug">Usar en el editor</button>`;
+  document.getElementById('useSug').onclick=()=>{document.getElementById('reply').value=reply;box.style.display='none'};
+};
+document.getElementById('resolve').onclick=()=>{const c=state.convs.find(x=>x.id===selected);if(c){c.status=c.status==='resolved'?'open':'resolved';save();render();toast('Estado actualizado')}};
+document.getElementById('priority').onchange=e=>{const c=state.convs.find(x=>x.id===selected);if(c){c.priority=e.target.value;save();toast('Prioridad actualizada')}};
+document.getElementById('reset').onclick=()=>{state=seed();save();render();toast('Demo reiniciada')};
+const channels=[['Web widget','widgetId','ID del widget'],['WhatsApp Cloud API','phoneNumberId','Phone Number ID'],['Telegram','botToken','Bot Token'],['Instagram','accessToken','Access Token'],['Email (Resend)','resendApiKey','Resend API Key'],['SMS / Twilio','accountSid','Account SID']];
+document.getElementById('channels').innerHTML=channels.map(([name,key,label])=>`<div class="card pad"><div class="row"><span class="badge brand">${name}</span></div><p class="small muted">Configura ${label}. En la demo se guarda en tu navegador.</p><div class="field"><label class="label">${label}</label><input class="input" data-key="${key}" value="${state.creds[key]||''}" placeholder="Pega aquí el valor"></div><button class="btn" data-save="${key}">Guardar</button></div>`).join('');
+document.querySelectorAll('[data-save]').forEach(b=>b.onclick=()=>{const k=b.dataset.save;state.creds[k]=document.querySelector(`[data-key="${k}"]`).value;save();toast(`${k} guardado (solo local)`)});
+document.getElementById('articles').innerHTML=state.articles.map(([t,c])=>`<div style="border-bottom:1px solid var(--border);padding:9px 0"><div class="strong">${t}</div><div class="small muted">${c}</div></div>`).join('');
+render();
+</script>
+</body>
+</html>
