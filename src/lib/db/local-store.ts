@@ -11,6 +11,7 @@
 
 import { randomBytes } from "node:crypto";
 import { mkdir, readFile, rename, unlink, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { decryptInboxCredentials, encryptInboxCredentials } from "../crypto";
 import type {
@@ -39,7 +40,14 @@ export interface StoreData {
   tasks: Task[];
 }
 
-const DATA_DIR = join(process.cwd(), ".data");
+/**
+ * Vercel's filesystem is read-only except /tmp. Without DATABASE_URL we still
+ * want the demo to boot, so we use a writable path inside /tmp there. Data is
+ * ephemeral per serverless invocation: configure Supabase for persistence.
+ */
+const DATA_DIR = process.env.VERCEL
+  ? join(tmpdir(), "conversa-crm", ".data")
+  : join(process.cwd(), ".data");
 const STORE_FILE = join(DATA_DIR, "store.json");
 
 /**
